@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:os-gateway="http://www.openspaces.org/schema/core/gateway"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.openspaces.org/schema/core/gateway
+       http://www.openspaces.org/schema/core/gateway/openspaces-gateway.xsd">
+
+    <bean id="propertiesConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="ignoreResourceNotFound" value="true" />
+        <property name="properties">
+            <props>
+                <prop key="local-gateway-name">central</prop>
+                <prop key="local-space-name">mySpace</prop>
+                <prop key="username">username</prop>
+                <prop key="password">password</prop>
+                <prop key="requires-bootstrap">false</prop>
+                <prop key="local-lookup-host-1">localhost</prop>
+                <prop key="local-lookup-host-2">localhost</prop>
+                <prop key="local-lookup-host-3">localhost</prop>
+                <prop key="lookup-port">4174</prop>
+                <prop key="communication-port">8200</prop>
+                <prop key="remote-gateway-name-a">east</prop>
+                <prop key="remote-lookup-host-a-1">localhost</prop>
+                <prop key="remote-lookup-host-a-2">localhost</prop>
+                <prop key="remote-lookup-host-a-3">localhost</prop>
+                <prop key="remote-gateway-name-b">west</prop>
+                <prop key="remote-lookup-host-b-1">localhost</prop>
+                <prop key="remote-lookup-host-b-2">localhost</prop>
+                <prop key="remote-lookup-host-b-3">localhost</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="credentials" class="com.gigaspaces.security.directory.DefaultCredentialsProvider">
+        <constructor-arg type="java.lang.String" value="${username}"/>
+        <constructor-arg type="java.lang.String" value="${password}"/>
+    </bean>
+
+    <!-- spring profiles used to conditionally enable security for the delegator -->
+    
+
+
+    <bean id="remoteGatewaySourceA" class="org.openspaces.core.gateway.GatewaySource">
+        <property name="name" value="${remote-gateway-name-a}" />
+    </bean>
+    <bean id="remoteGatewaySourceB" class="org.openspaces.core.gateway.GatewaySource">
+        <property name="name" value="${remote-gateway-name-b}" />
+    </bean>
+
+    <!-- spring profiles used to conditionally enable security for the delegator -->
+    
+    
+    <!-- Use the bean declaration because bootstrap is a boolean and because of xsd rules it will generate an error
+    <os-gateway:sink id="sink" local-gateway-name="${local-gateway-name}" gateway-lookups="gatewayLookups" requires-bootstrap="true" start-embedded-lus="true"
+            local-space-url="jini://*/*/${local-space-name}">
+        <os-gateway:sources>
+            <os-gateway:source name="${remote-gateway-name-a}"/>
+            <os-gateway:source name="${remote-gateway-name-b}"/>
+        </os-gateway:sources>
+        <os-gateway:security username="${username}" password="${password}"/>
+    </os-gateway:sink>
+    -->
+
+    <os-gateway:lookups id="gatewayLookups">
+        <os-gateway:lookup gateway-name="${local-gateway-name}"  host="${local-lookup-host-1}"  discovery-port="${lookup-port}"  communication-port="${communication-port}"/>
+        <os-gateway:lookup gateway-name="${local-gateway-name}"  host="${local-lookup-host-2}"  discovery-port="${lookup-port}"  communication-port="${communication-port}"/>
+        <os-gateway:lookup gateway-name="${local-gateway-name}"  host="${local-lookup-host-3}"  discovery-port="${lookup-port}"  communication-port="${communication-port}"/>
+        <os-gateway:lookup gateway-name="${remote-gateway-name-a}" host="${remote-lookup-host-a-1}" discovery-port="${lookup-port}" communication-port="${communication-port}"/>
+        <os-gateway:lookup gateway-name="${remote-gateway-name-a}" host="${remote-lookup-host-a-2}" discovery-port="${lookup-port}" communication-port="${communication-port}"/>
+        <os-gateway:lookup gateway-name="${remote-gateway-name-a}" host="${remote-lookup-host-a-3}" discovery-port="${lookup-port}" communication-port="${communication-port}"/>
+        <os-gateway:lookup gateway-name="${remote-gateway-name-b}" host="${remote-lookup-host-b-1}" discovery-port="${lookup-port}" communication-port="${communication-port}"/>
+        <os-gateway:lookup gateway-name="${remote-gateway-name-b}" host="${remote-lookup-host-b-2}" discovery-port="${lookup-port}" communication-port="${communication-port}"/>
+        <os-gateway:lookup gateway-name="${remote-gateway-name-b}" host="${remote-lookup-host-b-3}" discovery-port="${lookup-port}" communication-port="${communication-port}"/>
+    </os-gateway:lookups>
+
+
+    <beans profile="dev">
+        <os-gateway:delegator id="delegator" local-gateway-name="${local-gateway-name}" gateway-lookups="gatewayLookups"
+                              start-embedded-lus="true">
+            <os-gateway:delegations>
+                <os-gateway:delegation target="${remote-gateway-name-a}"/>
+                <os-gateway:delegation target="${remote-gateway-name-b}"/>
+            </os-gateway:delegations>
+        </os-gateway:delegator>
+        <bean id="sink" class="org.openspaces.core.gateway.GatewaySinkFactoryBean">
+            <property name="localGatewayName" value="${local-gateway-name}"/>
+            <property name="gatewayLookups" ref="gatewayLookups" />
+            <property name="requiresBootstrap" value="${requires-bootstrap}" />
+            <property name="startEmbeddedLus" value="true" />
+            <property name="localSpaceUrl" value="jini://*/*/${local-space-name}" />
+            <property name="gatewaySources">
+                <list value-type="org.openspaces.core.gateway.GatewaySource">
+                    <ref bean="remoteGatewaySourceA" />
+                    <ref bean="remoteGatewaySourceB" />
+                </list>
+            </property>
+        </bean>
+    </beans>
+    
+    <beans profile="prod">
+        <os-gateway:delegator id="delegator" local-gateway-name="${local-gateway-name}" gateway-lookups="gatewayLookups"
+                              start-embedded-lus="true">
+            <os-gateway:delegations>
+                <os-gateway:delegation target="${remote-gateway-name-a}"/>
+                <os-gateway:delegation target="${remote-gateway-name-b}"/>
+            </os-gateway:delegations>
+            <os-gateway:security credentials-provider="credentials"/>
+        </os-gateway:delegator>
+
+        <bean id="sink" class="org.openspaces.core.gateway.GatewaySinkFactoryBean">
+            <property name="localGatewayName" value="${local-gateway-name}"/>
+            <property name="gatewayLookups" ref="gatewayLookups" />
+            <property name="requiresBootstrap" value="${requires-bootstrap}" />
+            <property name="startEmbeddedLus" value="true" />
+            <property name="localSpaceUrl" value="jini://*/*/${local-space-name}" />
+            <property name="gatewaySources">
+                <list value-type="org.openspaces.core.gateway.GatewaySource">
+                    <ref bean="remoteGatewaySourceA" />
+                    <ref bean="remoteGatewaySourceB" />
+                </list>
+            </property>
+            <property name="credentialsProvider" ref="credentials"/>
+        </bean>
+    </beans>
+</beans>
+

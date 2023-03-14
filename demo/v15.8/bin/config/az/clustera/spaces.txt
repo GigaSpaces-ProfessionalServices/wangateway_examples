@@ -1,0 +1,3 @@
+## list of spaces to be processed
+Product
+Account
