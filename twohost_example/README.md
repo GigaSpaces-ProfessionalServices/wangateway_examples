@@ -10,3 +10,4 @@ This is an example project that demonstrates WAN Gateway in a bi-directional top
 6. In the server that is designated as DE_MANAGER, run `./startGrid-DE.sh`, then `./deploy-DE.sh`
 7. There are helper scripts for starting the webui and gs-ui.
 
+Suggestion: Make the modifications and push the same set of code two both servers. Environment specific configurations should be limited to the settings found in `bin/setExampleEnv.sh`.
